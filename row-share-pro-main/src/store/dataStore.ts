@@ -95,17 +95,10 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
   },
 
-  checkAutoDelete: () => {
-    const uploadDate = get().uploadDate;
-    
-    if (uploadDate) {
-      const uploadTime = new Date(uploadDate).getTime();
-      const currentTime = new Date().getTime();
-      const daysPassed = (currentTime - uploadTime) / (1000 * 60 * 60 * 24);
-
-      if (daysPassed >= 30) {
-        get().deleteAll();
-      }
-    }
+  checkAutoDelete: async () => {
+    // Auto-delete is handled server-side - the API already filters out data older than 30 days
+    // This function is kept for backward compatibility and can trigger manual cleanup if needed
+    // The /api/data endpoint automatically excludes uploads older than 30 days
+    // For scheduled cleanup, use external cron service or manual trigger
   },
 }));

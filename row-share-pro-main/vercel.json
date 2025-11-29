@@ -7,12 +7,6 @@
     "api/**/*.ts": {
       "maxDuration": 30
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron-auto-delete",
-      "schedule": "0 0 * * *"
-    }
-  ]
+  }
 }
 
