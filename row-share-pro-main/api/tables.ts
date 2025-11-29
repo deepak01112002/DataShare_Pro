@@ -6,6 +6,11 @@ const DB_NAME = process.env.DB_NAME || 'rowshare';
 const COLLECTION_NAME = 'data';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).json({}).end();
@@ -22,7 +27,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let client: MongoClient | null = null;
     try {
-      client = new MongoClient(MONGODB_URI);
+      client = new MongoClient(MONGODB_URI, {
+        serverSelectionTimeoutMS: 8000, // 8 second timeout
+        connectTimeoutMS: 8000,
+      });
       await client.connect();
 
       const db = client.db(DB_NAME);
