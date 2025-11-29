@@ -40,9 +40,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let client: MongoClient | null = null;
     try {
+      // MongoDB Atlas mongodb+srv:// automatically uses TLS
       client = new MongoClient(MONGODB_URI, {
-        serverSelectionTimeoutMS: 8000, // 8 second timeout
-        connectTimeoutMS: 8000,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
       });
       await client.connect();
 

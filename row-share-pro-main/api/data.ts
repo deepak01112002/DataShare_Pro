@@ -40,34 +40,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let client: MongoClient | null = null;
     try {
+      // MongoDB Atlas mongodb+srv:// automatically uses TLS
+      // Only set connection options, don't override TLS settings
       client = new MongoClient(MONGODB_URI, {
-        serverSelectionTimeoutMS: 8000, // 8 second timeout
-        connectTimeoutMS: 8000,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
       });
       await client.connect();
 
       const db = client.db(DB_NAME);
       const collection = db.collection(COLLECTION_NAME);
 
-      const { tableId } = req.query;
+      const { tableId, showAll } = req.query;
 
-      // Get all uploads that are within 30 days
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+      // Get all uploads - filter by 30 days unless showAll is true
       let uploads;
       
       if (tableId && tableId !== 'all') {
         // Get specific table
-        uploads = await collection.find({
-          uploadId: tableId,
-          uploadDate: { $gte: thirtyDaysAgo }
-        }).sort({ uploadDate: -1 }).toArray();
+        const query: any = { uploadId: tableId };
+        if (showAll !== 'true') {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          query.uploadDate = { $gte: thirtyDaysAgo };
+        }
+        uploads = await collection.find(query).sort({ uploadDate: -1 }).toArray();
       } else {
         // Get all tables (merged)
-        uploads = await collection.find({
-          uploadDate: { $gte: thirtyDaysAgo }
-        }).sort({ uploadDate: -1 }).toArray();
+        const query: any = {};
+        if (showAll !== 'true') {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          query.uploadDate = { $gte: thirtyDaysAgo };
+        }
+        uploads = await collection.find(query).sort({ uploadDate: -1 }).toArray();
       }
 
       if (uploads.length === 0) {
@@ -127,12 +133,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error: any) {
     console.error('Get data error:', error);
-    // Return empty data on error instead of failing
+    // Return error details for debugging
+    const errorMessage = error.message || 'Unknown error';
+    const isSSLerror = errorMessage.includes('SSL') || errorMessage.includes('TLS') || errorMessage.includes('tlsv1');
+    
+    if (isSSLerror) {
+      return res.status(500).json({
+        error: 'MongoDB connection error',
+        message: 'SSL/TLS connection failed. Please check your MONGODB_URI connection string format and ensure MongoDB Atlas network access is configured correctly.',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      });
+    }
+    
+    // Return empty data on other errors to prevent frontend crashes
     return res.status(200).json({
       data: [],
       columns: [],
       uploadDate: null,
       tableName: null,
+      error: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
     });
   }
 }

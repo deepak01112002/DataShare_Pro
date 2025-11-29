@@ -27,22 +27,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let client: MongoClient | null = null;
     try {
+      // MongoDB Atlas mongodb+srv:// automatically uses TLS
       client = new MongoClient(MONGODB_URI, {
-        serverSelectionTimeoutMS: 8000, // 8 second timeout
-        connectTimeoutMS: 8000,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
       });
       await client.connect();
 
       const db = client.db(DB_NAME);
       const collection = db.collection(COLLECTION_NAME);
 
-      // Get all uploads that are within 30 days
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const { showAll } = req.query;
+
+      // Get all uploads - filter by 30 days unless showAll is true
+      let query: any = {};
+      if (showAll !== 'true') {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        query.uploadDate = { $gte: thirtyDaysAgo };
+      }
       
-      const uploads = await collection.find({
-        uploadDate: { $gte: thirtyDaysAgo }
-      }).sort({ uploadDate: -1 }).toArray();
+      const uploads = await collection.find(query).sort({ uploadDate: -1 }).toArray();
 
       // Map uploads to tables
       const tables = uploads.map((upload, index) => {
@@ -72,6 +77,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error: any) {
     console.error('Get tables error:', error);
+    const errorMessage = error.message || 'Unknown error';
+    const isSSLerror = errorMessage.includes('SSL') || errorMessage.includes('TLS') || errorMessage.includes('tlsv1');
+    
+    if (isSSLerror) {
+      return res.status(500).json({
+        error: 'MongoDB connection error',
+        message: 'SSL/TLS connection failed. Please check your MONGODB_URI connection string format.',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        tables: [],
+      });
+    }
+    
     return res.status(200).json({ tables: [] });
   }
 }
