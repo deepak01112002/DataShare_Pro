@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Trash2, Eye, X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, Eye, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -253,16 +253,7 @@ export const DataTable = () => {
       <Dialog open={!!selectedRow} onOpenChange={() => setSelectedRow(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              Row Details
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSelectedRow(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogTitle>
+            <DialogTitle>Row Details</DialogTitle>
           </DialogHeader>
           {selectedRow && (
             <div className="space-y-4">

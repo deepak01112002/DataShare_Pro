@@ -2,7 +2,21 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { MongoClient } from 'mongodb';
 import * as XLSX from 'xlsx';
 
-const MONGODB_URI = process.env.MONGODB_URI || '';
+// Normalize MongoDB connection string
+function normalizeMongoURI(uri: string): string {
+  if (!uri) return uri;
+  if (uri.includes('?')) {
+    const [base, query] = uri.split('?');
+    const params = new URLSearchParams(query);
+    params.delete('appName');
+    if (!params.has('retryWrites')) params.set('retryWrites', 'true');
+    if (!params.has('w')) params.set('w', 'majority');
+    return `${base}?${params.toString()}`;
+  }
+  return `${uri}?retryWrites=true&w=majority`;
+}
+
+const MONGODB_URI = normalizeMongoURI(process.env.MONGODB_URI || '');
 const DB_NAME = process.env.DB_NAME || 'rowshare';
 const COLLECTION_NAME = 'data';
 

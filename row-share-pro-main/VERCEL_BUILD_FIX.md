@@ -50,3 +50,4 @@ Then update your package.json to move vite from devDependencies to dependencies.
 2. Commit and push the updated `vercel.json`
 3. Redeploy
 
+

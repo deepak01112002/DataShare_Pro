@@ -83,3 +83,4 @@ CRON_SECRET=your-random-secret-key-here
 
 **Important:** Never commit your `.env` file to Git!
 
+

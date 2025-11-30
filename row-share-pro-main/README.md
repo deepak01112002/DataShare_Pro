@@ -1,4 +1,4 @@
-# DataShare Pro
+# Shree Aadesh Enterprise
 
 A modern web application for uploading, managing, and sharing Excel data with WhatsApp integration. Built with React, TypeScript, and deployed on Vercel with MongoDB Atlas.
 

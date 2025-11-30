@@ -1,9 +1,37 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { MongoClient } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI || '';
 const DB_NAME = process.env.DB_NAME || 'rowshare';
 const COLLECTION_NAME = 'data';
+
+// Normalize MongoDB connection string
+function normalizeMongoURI(uri: string): string {
+  if (!uri) return uri;
+  
+  // If it already has query parameters
+  if (uri.includes('?')) {
+    const [base, query] = uri.split('?');
+    const params = new URLSearchParams(query);
+    
+    // Remove problematic parameters
+    params.delete('appName');
+    
+    // Add required parameters if missing
+    if (!params.has('retryWrites')) {
+      params.set('retryWrites', 'true');
+    }
+    if (!params.has('w')) {
+      params.set('w', 'majority');
+    }
+    
+    return `${base}?${params.toString()}`;
+  }
+  
+  // No query parameters, add them
+  return `${uri}?retryWrites=true&w=majority`;
+}
+
+const MONGODB_URI = normalizeMongoURI(process.env.MONGODB_URI || '');
 
 // CORS headers
 const corsHeaders = {
@@ -133,15 +161,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error: any) {
     console.error('Get data error:', error);
-    // Return error details for debugging
     const errorMessage = error.message || 'Unknown error';
-    const isSSLerror = errorMessage.includes('SSL') || errorMessage.includes('TLS') || errorMessage.includes('tlsv1');
+    const isSSLerror = errorMessage.includes('SSL') || errorMessage.includes('TLS') || errorMessage.includes('tlsv1') || errorMessage.includes('0A000438');
+    
+    // Log connection string info (without password) for debugging
+    const uriForLog = MONGODB_URI ? MONGODB_URI.replace(/:([^:@]+)@/, ':****@') : 'not set';
+    console.error('Connection string (masked):', uriForLog);
     
     if (isSSLerror) {
       return res.status(500).json({
-        error: 'MongoDB connection error',
-        message: 'SSL/TLS connection failed. Please check your MONGODB_URI connection string format and ensure MongoDB Atlas network access is configured correctly.',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        error: 'MongoDB SSL/TLS connection error',
+        message: 'Unable to establish secure connection to MongoDB Atlas.',
+        troubleshooting: [
+          '1. Verify your MONGODB_URI in Vercel environment variables',
+          '2. Ensure connection string format: mongodb+srv://user:pass@cluster.mongodb.net/?retryWrites=true&w=majority',
+          '3. Check MongoDB Atlas Network Access allows 0.0.0.0/0',
+          '4. Verify database user credentials are correct',
+          '5. Ensure cluster is running in MongoDB Atlas'
+        ],
+        connectionStringFormat: 'mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/?retryWrites=true&w=majority',
       });
     }
     
