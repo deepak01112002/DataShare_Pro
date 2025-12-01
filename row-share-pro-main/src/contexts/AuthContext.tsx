@@ -8,8 +8,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_EMAIL = 'test@gmail.com';
-const ADMIN_PASSWORD = 'test@123';
+// Read admin credentials from environment variables so they can be configured via .env
+// Fallback to default values if env vars are not set.
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || 'ShreeAdeshEnterprise@gmail.com';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'ShreeAdesh@79';
 const AUTH_KEY = 'admin_authenticated';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
